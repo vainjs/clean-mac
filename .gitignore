@@ -1,0 +1,6 @@
+.DS_Store
+.superpowers/
+CleanMac/build/
+CleanMac/*.xcodeproj
+CleanMac/DerivedData/
+CleanMac/.build/
