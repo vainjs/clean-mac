@@ -1,6 +1,7 @@
 .DS_Store
 .superpowers/
-CleanMac/build/
-CleanMac/*.xcodeproj
-CleanMac/DerivedData/
-CleanMac/.build/
+src/build/
+src/*.xcodeproj
+src/DerivedData/
+src/.build/
+*.local.json

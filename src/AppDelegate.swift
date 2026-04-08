@@ -10,19 +10,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var cancellable: AnyCancellable?
 
     private func loadMenuBarIcon() -> NSImage? {
-        guard let url = Bundle.main.url(forResource: "menubar-icon", withExtension: "svg"),
-              let data = try? Data(contentsOf: url),
-              let svgImage = NSImage(data: data) else { return nil }
-        let size = NSSize(width: 16, height: 14)
-        let img = NSImage(size: size, flipped: false) { rect in
-            svgImage.draw(in: rect)
-            return true
-        }
-        img.isTemplate = true
-        return img
+        let image = NSImage(named: "menubar-icon") ?? NSImage(systemSymbolName: "leaf.fill", accessibilityDescription: "CleanMac")
+        image?.isTemplate = true
+        return image
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 确保单实例
+        let running = NSWorkspace.shared.runningApplications
+        for app in running where app.bundleIdentifier == Bundle.main.bundleIdentifier && app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            app.activate(options: [])
+            NSApp.terminate(nil)
+            return
+        }
+
         viewModel = CleanerViewModel()
         viewModel.dismissAction = { [weak self] in
             self?.popover.performClose(nil)
@@ -36,7 +37,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         // Status bar icon
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            button.image = loadMenuBarIcon() ?? NSImage(systemSymbolName: "leaf.fill", accessibilityDescription: "CleanMac")
+            let iconImage = loadMenuBarIcon() ?? NSImage(systemSymbolName: "leaf.fill", accessibilityDescription: "CleanMac")
+            button.image = iconImage
             button.action = #selector(togglePopover)
             button.target = self
         }
