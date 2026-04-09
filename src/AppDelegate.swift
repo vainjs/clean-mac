@@ -34,23 +34,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             self.popover.contentViewController?.view.window?.makeKeyAndOrderFront(nil)
         }
 
-        // Status bar icon
+        // 状态栏图标
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             let iconImage = loadMenuBarIcon() ?? NSImage(systemSymbolName: "leaf.fill", accessibilityDescription: "CleanMac")
             button.image = iconImage
             button.action = #selector(togglePopover)
             button.target = self
+
+            // 启用右键点击
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
-        // Popover with SwiftUI content
+        // Popover SwiftUI 内容
         let rootView = MenuBarView(viewModel: viewModel)
         popover = NSPopover()
         popover.behavior = .transient
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: rootView)
 
-        // Observe isCleaning for menu bar icon rotation
+        // 监听 isCleaning 状态控制图标旋转
         cancellable = viewModel.$isCleaning
             .receive(on: RunLoop.main)
             .sink { [weak self] cleaning in
@@ -64,12 +67,51 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             }
     }
 
+    // MARK: - 右键菜单
+
+    private func showRightClickMenu() {
+        let menu = NSMenu()
+        menu.minimumWidth = 180
+        
+        let exitItem = NSMenuItem(title: "退出", action: #selector(exitApp), keyEquivalent: "q")
+        exitItem.target = self
+        exitItem.keyEquivalentModifierMask = .command
+        menu.addItem(exitItem)
+
+        guard let button = statusItem.button,
+              let window = button.window else { return }
+        
+        // 获取按钮在屏幕上的位置
+        var buttonFrameInScreen = button.convert(button.bounds, to: nil)
+        buttonFrameInScreen = window.convertToScreen(buttonFrameInScreen)
+        
+        // 菜单定位点：按钮左下角往下 10 像素
+        let menuLocation = NSPoint(x: buttonFrameInScreen.minX, y: buttonFrameInScreen.minY - 10)
+        
+        menu.popUp(positioning: nil, at: menuLocation, in: nil)
+    }
+
+    @objc private func exitApp() {
+        popover.performClose(nil)
+        NSApp.terminate(nil)
+    }
+
+    // MARK: - 左键 Popover 控制
+
     @objc private func togglePopover() {
         guard let button = statusItem.button else { return }
+
+        // 检测右键点击
+        if let event = NSApp.currentEvent, event.type == .rightMouseUp {
+            showRightClickMenu()
+            return
+        }
+
+        // 左键行为
         if popover.isShown {
             popover.performClose(nil)
         } else {
-            // Refresh root view to ensure SwiftUI reflects current ViewModel state
+            // 刷新 SwiftUI 视图确保状态同步
             if let hostingVC = popover.contentViewController as? NSHostingController<MenuBarView> {
                 hostingVC.rootView = MenuBarView(viewModel: viewModel)
             }
@@ -88,7 +130,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         statusItem.button?.highlight(false)
     }
 
-    // MARK: - Menu Bar Icon Rotation
+    // MARK: - 菜单栏图标旋转动画
 
     private func startIconRotation() {
         angle = 0
