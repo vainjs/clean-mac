@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version bump type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+jobs:
+  release:
+    runs-on: macos-14
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "15.4"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Bump version
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple
+          version-type: ${{ github.event.inputs.version_type }}
+          skip-github-release: true
+
+      - name: Build
+        run: |
+          brew install xcodegen
+          cd src && xcodegen generate && xcodebuild -project CleanMac.xcodeproj -scheme CleanMac -configuration Release build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+      - name: Package DMG
+        run: |
+          cd src
+          APP_PATH=$(xcodebuild -project CleanMac.xcodeproj -scheme CleanMac -configuration Release -showBuildSettings 2>/dev/null | grep "BUILT_PRODUCTS_DIR" | awk '{print $3}')
+          cd ..
+          VERSION=$(git describe --tags | sed 's/v//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          hdiutil create -volname "CleanMac-$VERSION" -srcfolder "$APP_PATH/CleanMac.app" -ov -format UDZO "CleanMac-$VERSION.dmg"
+
+      - name: Push
+        run: |
+          VERSION=$(git describe --tags | sed 's/v//')
+          git push origin main
+          git push origin "v$VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: v${{ env.VERSION }}
+          body_path: CHANGELOG.md
+          draft: true
+          assets: CleanMac-${{ env.VERSION }}.dmg

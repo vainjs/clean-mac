@@ -3,6 +3,7 @@ options:
   deploymentTarget:
     macOS: "13.0"
   bundleIdPrefix: com.cleanmac
+  xcodeVersion: "15.4"
 targets:
   CleanMac:
     type: application
