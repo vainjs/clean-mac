@@ -30,7 +30,7 @@ class CleanerService {
 
         if selectedTaskIds.contains(.cache) {
             for dir in ["/Library/Caches/com.apple.Safari", "/Library/Caches/com.apple.dt.Xcode", "/Library/Caches/Homebrew"] {
-                cmds.append("rm -rf '\(dir)/'* 2>/dev/null || true")
+                cmds.append("rm -rf '\(dir)'/* 2>/dev/null || true")
             }
             cmds.append("find /private/var/log -name '*.log' -mtime +7 -delete 2>/dev/null || true")
         }
@@ -75,17 +75,23 @@ class CleanerService {
     func runDevToolsCleanup(onLog: @Sendable (String, Bool) -> Void) -> Bool {
         var didSomething = false
 
-        // Homebrew
-        let brewPaths = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]
-        if let brewPath = brewPaths.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) {
-            onLog("正在清理 Homebrew 缓存...", false)
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: brewPath)
-            process.arguments = ["cleanup", "--prune=all"]
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
-            try? process.run()
-            process.waitUntilExit()
+        // Homebrew - 直接删除缓存目录，比 `brew cleanup` 快很多
+        let brewCachePaths = [
+            "\(homeDir)/Library/Caches/Homebrew",
+            "/opt/homebrew/Cache",
+            "/usr/local/Cache"
+        ]
+        var brewFound = false
+        for cachePath in brewCachePaths {
+            if FileManager.default.fileExists(atPath: cachePath) {
+                if !brewFound {
+                    onLog("正在清理 Homebrew 缓存...", false)
+                    brewFound = true
+                }
+                try? FileManager.default.removeItem(atPath: cachePath)
+            }
+        }
+        if brewFound {
             onLog("✓ Homebrew 缓存已清理", false)
             didSomething = true
         }
@@ -176,20 +182,6 @@ class CleanerService {
                 throw CleanerError.userCancelled
             }
             throw CleanerError.taskFailed(errMsg)
-        }
-    }
-}
-
-enum CleanerError: LocalizedError {
-    case userCancelled
-    case taskFailed(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .userCancelled:
-            return "用户取消了授权"
-        case .taskFailed(let msg):
-            return "任务失败: \(msg)"
         }
     }
 }

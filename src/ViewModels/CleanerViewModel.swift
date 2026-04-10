@@ -1,12 +1,6 @@
 import Foundation
 import SwiftUI
 
-enum AppState {
-    case idle
-    case cleaning
-    case completed
-}
-
 @MainActor
 class CleanerViewModel: ObservableObject {
     @Published var appState: AppState = .idle

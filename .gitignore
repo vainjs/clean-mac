@@ -1,5 +1,6 @@
 .DS_Store
 .superpowers/
+.bundle/
 src/build/
 src/*.xcodeproj
 src/DerivedData/
