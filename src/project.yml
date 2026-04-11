@@ -18,7 +18,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cleanmac.app
         INFOPLIST_KEY_LSUIElement: true
         GENERATE_INFOPLIST_FILE: true
-        INFOPLIST_KEY_CFBundleShortVersionString: "0.0.0"
-        INFOPLIST_KEY_CFBundleVersion: "0.0.0"
+        INFOPLIST_KEY_CFBundleShortVersionString: "0.1.0"
+        INFOPLIST_KEY_CFBundleVersion: "0.1.0"
         MACOSX_DEPLOYMENT_TARGET: "13.0"
         SWIFT_VERSION: "5.9"
